@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador QR</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1D9E75">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f5f5f3;
+    color: #1a1a1a;
+    padding: 24px 16px;
+    min-height: 100vh;
+  }
+  .card {
+    max-width: 420px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 20px;
+    text-align: center;
+  }
+  label {
+    font-size: 14px;
+    color: #666;
+    display: block;
+    margin-bottom: 6px;
+  }
+  textarea {
+    width: 100%;
+    resize: vertical;
+    font-size: 15px;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    font-family: inherit;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0;
+  }
+  input[type="range"] { flex: 1; }
+  button {
+    width: 100%;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 500;
+    border-radius: 10px;
+    border: none;
+    background: #1D9E75;
+    color: white;
+    cursor: pointer;
+  }
+  button:active { opacity: 0.85; }
+  button.secondary {
+    background: white;
+    color: #1D9E75;
+    border: 1px solid #1D9E75;
+    margin-top: 12px;
+  }
+  #qr-wrap {
+    display: none;
+    margin-top: 20px;
+    text-align: center;
+  }
+  #qr-canvas-holder {
+    display: inline-block;
+    background: white;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid #eee;
+  }
+  #err {
+    color: #c0392b;
+    font-size: 13px;
+    margin-top: 8px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Generador de QR</h1>
+    <label for="qr-text">Contenido del QR</label>
+    <textarea id="qr-text" rows="3" placeholder="https://ejemplo.com o cualquier texto"></textarea>
+
+    <div class="row">
+      <label style="margin:0;">Tamaño</label>
+      <input type="range" min="150" max="400" step="10" value="250" id="qr-size">
+      <span id="size-out" style="font-size:14px; font-weight:500; min-width:44px;">250px</span>
+    </div>
+
+    <button id="gen-btn">Generar QR</button>
+    <p id="err">Escribe algo primero</p>
+
+    <div id="qr-wrap">
+      <div id="qr-canvas-holder"></div>
+      <button id="download-btn" class="secondary">Descargar PNG</button>
+    </div>
+  </div>
+
+<script src="qrcode.min.js"></script>
+<script>
+const sizeSlider = document.getElementById('qr-size');
+const sizeOut = document.getElementById('size-out');
+const genBtn = document.getElementById('gen-btn');
+const wrap = document.getElementById('qr-wrap');
+const holder = document.getElementById('qr-canvas-holder');
+const err = document.getElementById('err');
+const textInput = document.getElementById('qr-text');
+
+sizeSlider.addEventListener('input', () => {
+  sizeOut.textContent = sizeSlider.value + 'px';
+});
+
+genBtn.addEventListener('click', () => {
+  const text = textInput.value.trim();
+  if (!text) {
+    err.style.display = 'block';
+    wrap.style.display = 'none';
+    return;
+  }
+  err.style.display = 'none';
+  holder.innerHTML = '';
+  const size = parseInt(sizeSlider.value, 10);
+  new QRCode(holder, {
+    text: text,
+    width: size,
+    height: size,
+    correctLevel: QRCode.CorrectLevel.M
+  });
+  wrap.style.display = 'block';
+});
+
+textInput.addEventListener('input', () => {
+  if (err.style.display === 'block') err.style.display = 'none';
+});
+
+document.getElementById('download-btn').addEventListener('click', () => {
+  const canvas = holder.querySelector('canvas');
+  const img = holder.querySelector('img');
+  const source = canvas || img;
+  if (!source) return;
+  const link = document.createElement('a');
+  link.download = 'qr.png';
+  link.href = canvas ? canvas.toDataURL('image/png') : source.src;
+  link.click();
+});
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js');
+  });
+}
+</script>
+</body>
+</html>
