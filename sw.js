@@ -31,11 +31,17 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+const SHELL_FILES = ['index.html', 'manifest.json', 'sw.js'];
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
+  const url = new URL(event.request.url);
+  const isShellFile = event.request.mode === 'navigate' ||
+    SHELL_FILES.some((name) => url.pathname.endsWith(name));
+
   event.respondWith(
-    fetch(event.request, { cache: 'no-store' })
+    fetch(event.request, isShellFile ? { cache: 'no-store' } : {})
       .then((response) => {
         const copy = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
