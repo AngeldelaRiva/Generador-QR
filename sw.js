@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qr-gen-v3';
+const CACHE_NAME = 'qr-gen-v4';
 
 const FILES = [
   './',
@@ -15,7 +15,6 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(FILES))
   );
-
   self.skipWaiting();
 });
 
