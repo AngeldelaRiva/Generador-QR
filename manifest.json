@@ -1,8 +1,11 @@
 {
   "name": "Generador de código",
   "short_name": "QR/Barras",
-  "start_url": "./index.html",
+  "id": "/Generador-QR/",
+  "start_url": "/Generador-QR/index.html",
+  "scope": "/Generador-QR/",
   "display": "standalone",
+  "lang": "es",
   "background_color": "#ffffff",
   "theme_color": "#1D9E75",
   "icons": [

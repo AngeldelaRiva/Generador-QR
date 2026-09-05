@@ -561,6 +561,12 @@ function tickEscaneo() {
 }
 
 if ('serviceWorker' in navigator) {
+  let refrescando = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refrescando) return;
+    refrescando = true;
+    window.location.reload();
+  });
   navigator.serviceWorker.register('sw.js');
 }
 </script>
