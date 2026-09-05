@@ -3,25 +3,47 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Generador QR</title>
+<title>Generador QR / Código de barras</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1D9E75">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
+  :root {
+    --bg: #f5f5f3;
+    --card: #ffffff;
+    --text: #1a1a1a;
+    --text-muted: #666;
+    --border: #ddd;
+    --accent: #1D9E75;
+    --chip: #f0f0ee;
+    --chip-hover: #e4e4e0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181a;
+      --card: #222426;
+      --text: #f0f0ef;
+      --text-muted: #a0a0a0;
+      --border: #3a3d40;
+      --accent: #2ecc9a;
+      --chip: #2d3033;
+      --chip-hover: #383b3f;
+    }
+  }
   * { box-sizing: border-box; }
   body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: #f5f5f3;
-    color: #1a1a1a;
+    background: var(--bg);
+    color: var(--text);
     padding: 24px 16px;
     min-height: 100vh;
   }
   .card {
     max-width: 420px;
     margin: 0 auto;
-    background: white;
+    background: var(--card);
     border-radius: 16px;
     padding: 24px;
     box-shadow: 0 2px 12px rgba(0,0,0,0.06);
@@ -32,26 +54,52 @@
     margin: 0 0 20px;
     text-align: center;
   }
-  label {
-    font-size: 14px;
-    color: #666;
+  .tabs {
+    display: flex;
+    background: var(--chip);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 16px;
+  }
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px 4px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text-muted);
+    user-select: none;
+  }
+  .tab.active {
+    background: var(--card);
+    color: var(--accent);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  label.field {
+    font-size: 13px;
+    color: var(--text-muted);
     display: block;
     margin-bottom: 6px;
   }
-  textarea {
+  textarea, select, input[type="text"] {
     width: 100%;
-    resize: vertical;
     font-size: 15px;
     padding: 10px;
     border-radius: 10px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border);
     font-family: inherit;
+    margin-bottom: 12px;
+    background: var(--card);
+    color: var(--text);
   }
+  textarea { resize: vertical; }
   .row {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin: 16px 0;
+    margin-bottom: 12px;
   }
   input[type="range"] { flex: 1; }
   button {
@@ -61,110 +109,459 @@
     font-weight: 500;
     border-radius: 10px;
     border: none;
-    background: #1D9E75;
+    background: var(--accent);
     color: white;
     cursor: pointer;
   }
   button:active { opacity: 0.85; }
   button.secondary {
-    background: white;
-    color: #1D9E75;
-    border: 1px solid #1D9E75;
-    margin-top: 12px;
-  }
-  #qr-wrap {
-    display: none;
-    margin-top: 20px;
-    text-align: center;
-  }
-  #qr-canvas-holder {
-    display: inline-block;
-    background: white;
-    padding: 12px;
-    border-radius: 12px;
-    border: 1px solid #eee;
+    background: var(--card);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    margin-top: 0;
   }
   #err {
-    color: #c0392b;
+    color: #e05555;
     font-size: 13px;
-    margin-top: 8px;
+    margin: -6px 0 12px;
     display: none;
+  }
+  #output {
+    display: none;
+    margin-top: 16px;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  #output.show {
+    display: block;
+    opacity: 1;
+  }
+  #qr-holder, #barra-holder {
+    display: none;
+    background: white;
+    display: inline-block;
+    padding: 8px;
+    border-radius: 8px;
+  }
+  .actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .actions button { flex: 1; min-width: 100px; }
+  .historial {
+    margin-top: 20px;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+  }
+  .historial-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .historial h2 {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin: 0;
+  }
+  .link-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 12px;
+    width: auto;
+    padding: 0;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .chip {
+    display: inline-block;
+    background: var(--chip);
+    color: var(--text);
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    margin: 0 6px 6px 0;
+    cursor: pointer;
+  }
+  .chip:hover { background: var(--chip-hover); }
+  .plantillas {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .plantillas button {
+    font-size: 12px;
+    padding: 8px 4px;
+  }
+  #plantilla-campos { display: none; }
+  video {
+    width: 100%;
+    border-radius: 10px;
+    background: #000;
+    margin-bottom: 12px;
+  }
+  #scan-resultado {
+    display: none;
+    background: var(--chip);
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 14px;
+    margin-bottom: 12px;
+    word-break: break-all;
   }
 </style>
 </head>
 <body>
   <div class="card">
-    <h1>Generador de QR</h1>
-    <label for="qr-text">Contenido del QR</label>
-    <textarea id="qr-text" rows="3" placeholder="https://ejemplo.com o cualquier texto"></textarea>
+    <h1>Generador de código</h1>
 
-    <div class="row">
-      <label style="margin:0;">Tamaño</label>
-      <input type="range" min="150" max="400" step="10" value="250" id="qr-size">
-      <span id="size-out" style="font-size:14px; font-weight:500; min-width:44px;">250px</span>
+    <div class="tabs">
+      <div class="tab active" data-tipo="qr">QR</div>
+      <div class="tab" data-tipo="barra">Barras</div>
+      <div class="tab" data-tipo="escanear">Escanear</div>
     </div>
 
-    <button id="gen-btn">Generar QR</button>
-    <p id="err">Escribe algo primero</p>
+    <div id="panel-generar">
+      <div id="plantillas" class="plantillas">
+        <button class="secondary" data-plantilla="wifi">WiFi</button>
+        <button class="secondary" data-plantilla="contacto">Contacto</button>
+        <button class="secondary" data-plantilla="enlace">Enlace</button>
+      </div>
 
-    <div id="qr-wrap">
-      <div id="qr-canvas-holder"></div>
-      <button id="download-btn" class="secondary">Descargar PNG</button>
+      <div id="plantilla-campos"></div>
+
+      <label class="field">Contenido</label>
+      <textarea id="texto" rows="3" placeholder="Escribe algo aquí"></textarea>
+      <p id="err">Escribe algo primero</p>
+
+      <div id="qr-opciones">
+        <div class="row">
+          <label class="field" style="margin:0;">Tamaño</label>
+          <input type="range" min="150" max="400" step="10" value="250" id="qr-size">
+          <span id="size-out" style="font-size:14px; font-weight:500; min-width:44px;">250px</span>
+        </div>
+        <label class="field">Corrección de errores</label>
+        <select id="qr-correccion">
+          <option value="L">L - Baja (7%)</option>
+          <option value="M" selected>M - Media (15%)</option>
+          <option value="Q">Q - Alta (25%)</option>
+          <option value="H">H - Máxima (30%), útil si va impreso pequeño</option>
+        </select>
+      </div>
+
+      <div id="barra-opciones" style="display:none;">
+        <label class="field">Formato</label>
+        <select id="barra-formato">
+          <option value="CODE128">CODE128 (general)</option>
+          <option value="EAN13">EAN-13</option>
+          <option value="EAN8">EAN-8</option>
+          <option value="UPC">UPC-A</option>
+          <option value="CODE39">CODE39</option>
+          <option value="ITF14">ITF-14</option>
+          <option value="MSI">MSI</option>
+          <option value="pharmacode">Pharmacode</option>
+          <option value="codabar">Codabar</option>
+        </select>
+      </div>
+
+      <button id="gen-btn">Generar</button>
+
+      <div id="output">
+        <div id="qr-holder"></div>
+        <svg id="barra-holder"></svg>
+        <div class="actions">
+          <button class="secondary" id="download-btn">Descargar</button>
+          <button class="secondary" id="copy-btn">Copiar</button>
+          <button class="secondary" id="share-btn">Compartir</button>
+        </div>
+      </div>
+
+      <div class="historial" id="historial" style="display:none;">
+        <div class="historial-head">
+          <h2>Recientes</h2>
+          <button class="link-btn" id="clear-historial">Limpiar</button>
+        </div>
+        <div id="historial-chips"></div>
+      </div>
+    </div>
+
+    <div id="panel-escanear" style="display:none;">
+      <video id="video" playsinline></video>
+      <canvas id="canvas-scan" style="display:none;"></canvas>
+      <div id="scan-resultado"></div>
+      <button id="scan-toggle">Iniciar cámara</button>
     </div>
   </div>
 
 <script src="qrcode.min.js"></script>
+<script src="jsbarcode.min.js"></script>
+<script src="jsqr.min.js"></script>
 <script>
-const sizeSlider = document.getElementById('qr-size');
-const sizeOut = document.getElementById('size-out');
-const genBtn = document.getElementById('gen-btn');
-const wrap = document.getElementById('qr-wrap');
-const holder = document.getElementById('qr-canvas-holder');
-const err = document.getElementById('err');
-const textInput = document.getElementById('qr-text');
+let tipoActual = 'qr';
 
-sizeSlider.addEventListener('input', () => {
-  sizeOut.textContent = sizeSlider.value + 'px';
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    tipoActual = tab.dataset.tipo;
+
+    document.getElementById('panel-generar').style.display = tipoActual === 'escanear' ? 'none' : 'block';
+    document.getElementById('panel-escanear').style.display = tipoActual === 'escanear' ? 'block' : 'none';
+    document.getElementById('qr-opciones').style.display = tipoActual === 'qr' ? 'block' : 'none';
+    document.getElementById('barra-opciones').style.display = tipoActual === 'barra' ? 'block' : 'none';
+
+    if (tipoActual !== 'escanear') pararCamara();
+  });
 });
 
-genBtn.addEventListener('click', () => {
-  const text = textInput.value.trim();
-  if (!text) {
+document.getElementById('qr-size').addEventListener('input', (e) => {
+  document.getElementById('size-out').textContent = e.target.value + 'px';
+});
+
+const textoInput = document.getElementById('texto');
+const err = document.getElementById('err');
+const output = document.getElementById('output');
+const qrHolder = document.getElementById('qr-holder');
+const barraHolder = document.getElementById('barra-holder');
+
+document.querySelectorAll('[data-plantilla]').forEach(btn => {
+  btn.addEventListener('click', () => mostrarPlantilla(btn.dataset.plantilla));
+});
+
+function mostrarPlantilla(tipo) {
+  const cont = document.getElementById('plantilla-campos');
+  cont.style.display = 'block';
+  if (tipo === 'wifi') {
+    cont.innerHTML = `
+      <input type="text" id="p-ssid" placeholder="Nombre de la red (SSID)">
+      <input type="text" id="p-pass" placeholder="Contraseña">
+      <button id="p-usar">Usar plantilla</button>`;
+    document.getElementById('p-usar').addEventListener('click', () => {
+      const ssid = document.getElementById('p-ssid').value;
+      const pass = document.getElementById('p-pass').value;
+      textoInput.value = 'WIFI:T:WPA;S:' + ssid + ';P:' + pass + ';;';
+      cont.style.display = 'none';
+    });
+  } else if (tipo === 'contacto') {
+    cont.innerHTML = `
+      <input type="text" id="p-nombre" placeholder="Nombre completo">
+      <input type="text" id="p-tel" placeholder="Teléfono">
+      <input type="text" id="p-email" placeholder="Correo (opcional)">
+      <button id="p-usar">Usar plantilla</button>`;
+    document.getElementById('p-usar').addEventListener('click', () => {
+      const nombre = document.getElementById('p-nombre').value;
+      const tel = document.getElementById('p-tel').value;
+      const email = document.getElementById('p-email').value;
+      textoInput.value = 'BEGIN:VCARD\nVERSION:3.0\nFN:' + nombre + '\nTEL:' + tel + (email ? '\nEMAIL:' + email : '') + '\nEND:VCARD';
+      cont.style.display = 'none';
+    });
+  } else if (tipo === 'enlace') {
+    cont.innerHTML = `
+      <input type="text" id="p-url" placeholder="https://ejemplo.com">
+      <button id="p-usar">Usar plantilla</button>`;
+    document.getElementById('p-usar').addEventListener('click', () => {
+      textoInput.value = document.getElementById('p-url').value;
+      cont.style.display = 'none';
+    });
+  }
+}
+
+function cargarHistorial() {
+  const lista = JSON.parse(localStorage.getItem('historial') || '[]');
+  const cont = document.getElementById('historial-chips');
+  const wrap = document.getElementById('historial');
+  cont.innerHTML = '';
+  if (lista.length === 0) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  lista.forEach(item => {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.textContent = item.texto.length > 20 ? item.texto.slice(0, 20) + '…' : item.texto;
+    chip.addEventListener('click', () => {
+      textoInput.value = item.texto;
+      document.querySelector('.tab[data-tipo="' + item.tipo + '"]').click();
+    });
+    cont.appendChild(chip);
+  });
+}
+
+document.getElementById('clear-historial').addEventListener('click', () => {
+  localStorage.removeItem('historial');
+  cargarHistorial();
+});
+
+function guardarHistorial(texto, tipo) {
+  let lista = JSON.parse(localStorage.getItem('historial') || '[]');
+  lista = lista.filter(i => i.texto !== texto || i.tipo !== tipo);
+  lista.unshift({ texto, tipo });
+  lista = lista.slice(0, 5);
+  localStorage.setItem('historial', JSON.stringify(lista));
+  cargarHistorial();
+}
+
+document.getElementById('gen-btn').addEventListener('click', () => {
+  const texto = textoInput.value.trim();
+  if (!texto) {
+    err.textContent = 'Escribe algo primero';
     err.style.display = 'block';
-    wrap.style.display = 'none';
+    output.classList.remove('show');
     return;
   }
   err.style.display = 'none';
-  holder.innerHTML = '';
-  const size = parseInt(sizeSlider.value, 10);
-  new QRCode(holder, {
-    text: text,
-    width: size,
-    height: size,
-    correctLevel: QRCode.CorrectLevel.M
-  });
-  wrap.style.display = 'block';
+
+  qrHolder.innerHTML = '';
+  barraHolder.innerHTML = '';
+
+  if (tipoActual === 'qr') {
+    barraHolder.style.display = 'none';
+    qrHolder.style.display = 'inline-block';
+    const size = parseInt(document.getElementById('qr-size').value, 10);
+    const nivel = document.getElementById('qr-correccion').value;
+    new QRCode(qrHolder, { text: texto, width: size, height: size, correctLevel: QRCode.CorrectLevel[nivel] });
+  } else {
+    qrHolder.style.display = 'none';
+    barraHolder.style.display = 'inline-block';
+    const formato = document.getElementById('barra-formato').value;
+    try {
+      JsBarcode(barraHolder, texto, { format: formato });
+    } catch (e) {
+      err.textContent = 'Ese texto no es válido para el formato ' + formato;
+      err.style.display = 'block';
+      output.classList.remove('show');
+      return;
+    }
+  }
+
+  output.classList.add('show');
+  guardarHistorial(texto, tipoActual);
 });
 
-textInput.addEventListener('input', () => {
+textoInput.addEventListener('input', () => {
   if (err.style.display === 'block') err.style.display = 'none';
 });
 
+function obtenerCanvas(callback) {
+  if (tipoActual === 'qr') {
+    const canvas = qrHolder.querySelector('canvas');
+    const img = qrHolder.querySelector('img');
+    if (canvas) return callback(canvas);
+    if (img) {
+      const c = document.createElement('canvas');
+      c.width = img.width; c.height = img.height;
+      c.getContext('2d').drawImage(img, 0, 0);
+      return callback(c);
+    }
+  } else {
+    const svgData = new XMLSerializer().serializeToString(barraHolder);
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    const image = new Image();
+    image.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = barraHolder.getBBox().width || 300;
+      c.height = barraHolder.getBBox().height || 150;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(image, 0, 0);
+      URL.revokeObjectURL(url);
+      callback(c);
+    };
+    image.src = url;
+  }
+}
+
 document.getElementById('download-btn').addEventListener('click', () => {
-  const canvas = holder.querySelector('canvas');
-  const img = holder.querySelector('img');
-  const source = canvas || img;
-  if (!source) return;
-  const link = document.createElement('a');
-  link.download = 'qr.png';
-  link.href = canvas ? canvas.toDataURL('image/png') : source.src;
-  link.click();
+  obtenerCanvas((canvas) => {
+    const link = document.createElement('a');
+    link.download = 'codigo.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
 });
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js');
+document.getElementById('copy-btn').addEventListener('click', () => {
+  obtenerCanvas((canvas) => {
+    canvas.toBlob((blob) => {
+      navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+        .catch(() => alert('No se pudo copiar en este navegador'));
+    });
   });
+});
+
+document.getElementById('share-btn').addEventListener('click', () => {
+  obtenerCanvas((canvas) => {
+    canvas.toBlob(async (blob) => {
+      const file = new File([blob], 'codigo.png', { type: 'image/png' });
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file] }); } catch (e) {}
+      } else {
+        alert('Compartir no está disponible en este navegador, usa Descargar.');
+      }
+    });
+  });
+});
+
+cargarHistorial();
+
+// --- Escáner con cámara ---
+let stream = null;
+let escaneando = false;
+const video = document.getElementById('video');
+const canvasScan = document.getElementById('canvas-scan');
+const scanResultado = document.getElementById('scan-resultado');
+const scanToggle = document.getElementById('scan-toggle');
+
+scanToggle.addEventListener('click', () => {
+  if (escaneando) pararCamara();
+  else iniciarCamara();
+});
+
+async function iniciarCamara() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    video.srcObject = stream;
+    video.play();
+    escaneando = true;
+    scanToggle.textContent = 'Detener cámara';
+    scanResultado.style.display = 'none';
+    requestAnimationFrame(tickEscaneo);
+  } catch (e) {
+    alert('No se pudo acceder a la cámara. Revisa los permisos.');
+  }
+}
+
+function pararCamara() {
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null;
+  escaneando = false;
+  scanToggle.textContent = 'Iniciar cámara';
+}
+
+function tickEscaneo() {
+  if (!escaneando) return;
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    canvasScan.width = video.videoWidth;
+    canvasScan.height = video.videoHeight;
+    const ctx = canvasScan.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvasScan.width, canvasScan.height);
+    const imageData = ctx.getImageData(0, 0, canvasScan.width, canvasScan.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    if (code) {
+      scanResultado.textContent = code.data;
+      scanResultado.style.display = 'block';
+    }
+  }
+  requestAnimationFrame(tickEscaneo);
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
 }
 </script>
 </body>
